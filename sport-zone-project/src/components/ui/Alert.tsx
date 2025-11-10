@@ -5,6 +5,7 @@ interface AlertProps {
   title?: string
   children: React.ReactNode
   onClose?: () => void
+  className?: string
 }
 
 /**
@@ -14,7 +15,8 @@ export function Alert({
   variant = "info", 
   title, 
   children, 
-  onClose 
+  onClose,
+  className = ""
 }: AlertProps) {
   const variants = {
     success: {
@@ -42,7 +44,7 @@ export function Alert({
   const style = variants[variant]
 
   return (
-    <div className={`border rounded-lg p-4 ${style.container}`} role="alert">
+    <div className={`border rounded-lg p-4 ${style.container} ${className}`} role="alert">
       <div className="flex items-start">
         <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full ${style.iconBg} font-bold`}>
           {style.icon}

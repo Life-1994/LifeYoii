@@ -13,6 +13,7 @@
     "setup": "prisma generate && prisma db push && node prisma/seed.js"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
     "@hookform/resolvers": "^3.3.2",
     "@prisma/client": "^5.7.0",
     "@radix-ui/react-avatar": "^1.0.4",
