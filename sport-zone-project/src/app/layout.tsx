@@ -1,11 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Cairo } from 'next/font/google'
-
-const cairo = Cairo({ 
-  subsets: ['arabic', 'latin'],
-  display: 'swap',
-})
+import { SessionProvider } from "@/components/SessionProvider"
 
 export const metadata: Metadata = {
   title: 'Sport Zone - المنطقة الرياضية',
@@ -19,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={cairo.className}>{children}</body>
+      <body className="font-sans antialiased">
+        <SessionProvider>
+          {children}
+        </SessionProvider>
+      </body>
     </html>
   )
 }
