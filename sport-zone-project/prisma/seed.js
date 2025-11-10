@@ -63,10 +63,10 @@ async function main() {
   ]
 
   for (const pkg of packages) {
-    await prisma.package.upsert({
-      where: { name: pkg.name },
-      update: {},
-      create: pkg,
+    await prisma.package.create({
+      data: pkg,
+    }).catch(() => {
+      console.log(`Package ${pkg.name} already exists, skipping...`)
     })
   }
 
