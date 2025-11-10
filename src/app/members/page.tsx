@@ -5,18 +5,21 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { 
   ArrowRight, 
-  Search, 
   UserPlus, 
   Edit, 
   Trash2, 
   Eye,
-  Filter,
   Download,
   CheckCircle2,
   XCircle,
-  Clock
+  Clock,
+  QrCode
 } from 'lucide-react'
 import { format } from 'date-fns'
+import MemberFilters from '@/components/members/MemberFilters'
+import ExportDialog from '@/components/members/ExportDialog'
+import BulkActionsMenu from '@/components/members/BulkActionsMenu'
+import QRScanner from '@/components/members/QRScanner'
 
 interface Member {
   id: string
@@ -39,7 +42,14 @@ export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [filters, setFilters] = useState<any>({
+    status: 'all',
+    gender: 'all',
+    subscriptionStatus: 'all',
+  })
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [showExportDialog, setShowExportDialog] = useState(false)
+  const [showQRScanner, setShowQRScanner] = useState(false)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -49,14 +59,14 @@ export default function MembersPage() {
 
   useEffect(() => {
     fetchMembers()
-  }, [search, statusFilter, pagination.page])
+  }, [search, filters, pagination.page])
 
   const fetchMembers = async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
         search,
-        status: statusFilter,
+        status: filters.status,
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
       })
@@ -66,11 +76,43 @@ export default function MembersPage() {
       
       setMembers(data.members)
       setPagination(data.pagination)
+      setSelectedIds([])
     } catch (error) {
       console.error('Error fetching members:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSearch = (value: string) => {
+    setSearch(value)
+    setPagination({ ...pagination, page: 1 })
+  }
+
+  const handleFilterChange = (newFilters: any) => {
+    setFilters(newFilters)
+    setPagination({ ...pagination, page: 1 })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === members.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(members.map(m => m.id))
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) 
+        ? prev.filter(i => i !== id)
+        : [...prev, id]
+    )
+  }
+
+  const handleQRScan = (memberId: string) => {
+    setShowQRScanner(false)
+    router.push(`/members/${memberId}`)
   }
 
   const handleDelete = async (id: string, name: string) => {
@@ -145,6 +187,20 @@ export default function MembersPage() {
             
             <div className="flex items-center gap-3">
               <button
+                onClick={() => setShowQRScanner(true)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-2"
+                title="مسح QR"
+              >
+                <QrCode className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowExportDialog(true)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-2"
+                title="تصدير"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
                 onClick={() => router.push('/members/new')}
                 className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
               >
@@ -162,53 +218,11 @@ export default function MembersPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="md:col-span-2">
-              <div className="relative">
-                <Search className="absolute right-3 top-3.5 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value)
-                    setPagination({ ...pagination, page: 1 })
-                  }}
-                  placeholder="ابحث بالاسم، رقم العضوية، الجوال..."
-                  className="w-full pr-12 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <div className="relative">
-                <Filter className="absolute right-3 top-3.5 w-5 h-5 text-slate-400" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value)
-                    setPagination({ ...pagination, page: 1 })
-                  }}
-                  className="w-full pr-12 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                >
-                  <option value="all">جميع الحالات</option>
-                  <option value="active">نشط</option>
-                  <option value="inactive">غير نشط</option>
-                  <option value="suspended">موقوف</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-4 flex items-center gap-4 text-sm text-slate-600">
-            <span>إجمالي المشتركين: <strong className="text-slate-800">{pagination.total}</strong></span>
-            <span>•</span>
-            <span>الصفحة: <strong className="text-slate-800">{pagination.page} من {pagination.totalPages}</strong></span>
-          </div>
-        </div>
+        <MemberFilters
+          onSearch={handleSearch}
+          onFilterChange={handleFilterChange}
+          totalMembers={pagination.total}
+        />
 
         {/* Table */}
         <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
@@ -227,6 +241,14 @@ export default function MembersPage() {
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
+                      <th className="px-6 py-4 text-right">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === members.length && members.length > 0}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                        />
+                      </th>
                       <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700">رقم العضوية</th>
                       <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700">الاسم</th>
                       <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700">الجوال</th>
@@ -239,6 +261,14 @@ export default function MembersPage() {
                   <tbody className="divide-y divide-slate-200">
                     {members.map((member) => (
                       <tr key={member.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(member.id)}
+                            onChange={() => toggleSelect(member.id)}
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                          />
+                        </td>
                         <td className="px-6 py-4">
                           <span className="font-mono font-semibold text-blue-600">{member.memberNumber}</span>
                         </td>
@@ -331,6 +361,29 @@ export default function MembersPage() {
           )}
         </div>
       </main>
+
+      {/* Dialogs */}
+      {showExportDialog && (
+        <ExportDialog
+          onClose={() => setShowExportDialog(false)}
+          filters={filters}
+        />
+      )}
+
+      {showQRScanner && (
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
+
+      {/* Bulk Actions */}
+      <BulkActionsMenu
+        selectedIds={selectedIds}
+        onComplete={() => {
+          fetchMembers()
+        }}
+      />
     </div>
   )
 }

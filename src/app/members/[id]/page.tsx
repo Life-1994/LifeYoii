@@ -14,9 +14,15 @@ import {
   CreditCard,
   Clock,
   DollarSign,
-  CheckCircle2
+  CheckCircle2,
+  QrCode,
+  Activity,
+  FileText,
+  Package
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, differenceInDays } from 'date-fns'
+import QRCodeDisplay from '@/components/members/QRCodeDisplay'
+import SubscriptionCard from '@/components/subscriptions/SubscriptionCard'
 
 interface Member {
   id: string
@@ -33,31 +39,72 @@ interface Member {
   status: string
   notes: string
   joinDate: string
-  subscriptions: any[]
-  attendance: any[]
-  payments: any[]
+  photo: string
 }
 
 export default function MemberDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [member, setMember] = useState<Member | null>(null)
+  const [subscriptions, setSubscriptions] = useState<any[]>([])
+  const [attendance, setAttendance] = useState<any[]>([])
+  const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
-    fetchMember()
-  }, [])
+    fetchData()
+  }, [params.id])
 
-  const fetchMember = async () => {
+  const fetchData = async () => {
+    setLoading(true)
     try {
-      const response = await fetch(`/api/members/${params.id}`)
-      const data = await response.json()
-      setMember(data)
+      const [memberRes, subsRes, attendanceRes, paymentsRes] = await Promise.all([
+        fetch(`/api/members/${params.id}`),
+        fetch(`/api/members/${params.id}/subscriptions`),
+        fetch(`/api/members/${params.id}/attendance?days=30`),
+        fetch(`/api/members/${params.id}/payments`),
+      ])
+
+      const memberData = await memberRes.json()
+      const subsData = await subsRes.json()
+      const attendanceData = await attendanceRes.json()
+      const paymentsData = await paymentsRes.json()
+
+      setMember(memberData.member)
+      setSubscriptions(subsData.subscriptions || [])
+      setAttendance(attendanceData.attendance || [])
+      setPayments(paymentsData.payments || [])
     } catch (error) {
-      console.error('Error fetching member:', error)
+      console.error('Error fetching data:', error)
     } finally {
       setLoading(false)
     }
   }
+
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      active: 'bg-green-100 text-green-800 border-green-200',
+      inactive: 'bg-red-100 text-red-800 border-red-200',
+      suspended: 'bg-orange-100 text-orange-800 border-orange-200',
+    }
+
+    const labels: Record<string, string> = {
+      active: 'نشط',
+      inactive: 'غير نشط',
+      suspended: 'موقوف',
+    }
+
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${styles[status]}`}>
+        {labels[status]}
+      </span>
+    )
+  }
+
+  const currentSubscription = subscriptions.find(s => s.status === 'active')
+  const daysRemaining = currentSubscription 
+    ? differenceInDays(new Date(currentSubscription.endDate), new Date())
+    : null
 
   if (loading) {
     return (
@@ -74,19 +121,11 @@ export default function MemberDetailsPage({ params }: { params: { id: string } }
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 text-xl">المشترك غير موجود</p>
-          <button
-            onClick={() => router.push('/members')}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            العودة للمشتركين
-          </button>
+          <p className="text-slate-600">العضو غير موجود</p>
         </div>
       </div>
     )
   }
-
-  const activeSubscription = member.subscriptions.find(sub => sub.status === 'active')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -109,15 +148,12 @@ export default function MemberDetailsPage({ params }: { params: { id: string } }
             
             <div className="flex items-center gap-3">
               <button
-                onClick={() => router.push(`/members/${member.id}/edit`)}
-                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                onClick={() => router.push(`/members/${params.id}/edit`)}
+                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2"
               >
                 <Edit className="w-5 h-5" />
                 تعديل
               </button>
-              <div className="relative w-12 h-12">
-                <Image src="/logo.png" alt="Sport Zone" fill className="object-contain" />
-              </div>
             </div>
           </div>
         </div>
@@ -126,261 +162,299 @@ export default function MemberDetailsPage({ params }: { params: { id: string } }
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Personal Info */}
+          {/* Left Column - Profile Info */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Personal Information */}
+            {/* Basic Info Card */}
             <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <User className="w-5 h-5 text-blue-600" />
-                المعلومات الشخصية
-              </h2>
-
+              <h2 className="text-xl font-bold text-slate-800 mb-4">المعلومات الأساسية</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-slate-600">الاسم الكامل</label>
-                  <p className="text-slate-800 mt-1">{member.fullName}</p>
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-sm text-slate-600">الاسم الكامل</p>
+                    <p className="font-semibold text-slate-800">{member.fullName}</p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-semibold text-slate-600">رقم الجوال</label>
-                  <p className="text-slate-800 mt-1 flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-slate-400" />
-                    {member.phone}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <Phone className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-sm text-slate-600">الجوال</p>
+                    <p className="font-semibold text-slate-800" dir="ltr">{member.phone}</p>
+                  </div>
                 </div>
 
                 {member.email && (
-                  <div>
-                    <label className="text-sm font-semibold text-slate-600">البريد الإلكتروني</label>
-                    <p className="text-slate-800 mt-1 flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-slate-400" />
-                      {member.email}
-                    </p>
-                  </div>
-                )}
-
-                {member.nationalId && (
-                  <div>
-                    <label className="text-sm font-semibold text-slate-600">رقم الهوية</label>
-                    <p className="text-slate-800 mt-1">{member.nationalId}</p>
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5 text-slate-400" />
+                    <div>
+                      <p className="text-sm text-slate-600">البريد الإلكتروني</p>
+                      <p className="font-semibold text-slate-800">{member.email}</p>
+                    </div>
                   </div>
                 )}
 
                 {member.dateOfBirth && (
-                  <div>
-                    <label className="text-sm font-semibold text-slate-600">تاريخ الميلاد</label>
-                    <p className="text-slate-800 mt-1 flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      {format(new Date(member.dateOfBirth), 'yyyy-MM-dd')}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-slate-400" />
+                    <div>
+                      <p className="text-sm text-slate-600">تاريخ الميلاد</p>
+                      <p className="font-semibold text-slate-800">
+                        {format(new Date(member.dateOfBirth), 'yyyy-MM-dd')}
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                <div>
-                  <label className="text-sm font-semibold text-slate-600">الجنس</label>
-                  <p className="text-slate-800 mt-1">{member.gender === 'male' ? 'ذكر' : 'أنثى'}</p>
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-sm text-slate-600">الجنس</p>
+                    <p className="font-semibold text-slate-800">
+                      {member.gender === 'male' ? 'ذكر' : 'أنثى'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-sm text-slate-600">الحالة</p>
+                    <div>{getStatusBadge(member.status)}</div>
+                  </div>
                 </div>
 
                 {member.address && (
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-slate-600">العنوان</label>
-                    <p className="text-slate-800 mt-1 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-slate-400" />
-                      {member.address}
-                    </p>
+                  <div className="flex items-center gap-3 md:col-span-2">
+                    <MapPin className="w-5 h-5 text-slate-400" />
+                    <div>
+                      <p className="text-sm text-slate-600">العنوان</p>
+                      <p className="font-semibold text-slate-800">{member.address}</p>
+                    </div>
                   </div>
                 )}
 
                 {member.emergencyContact && (
                   <>
-                    <div>
-                      <label className="text-sm font-semibold text-slate-600">جهة الاتصال للطوارئ</label>
-                      <p className="text-slate-800 mt-1">{member.emergencyContact}</p>
+                    <div className="flex items-center gap-3">
+                      <User className="w-5 h-5 text-slate-400" />
+                      <div>
+                        <p className="text-sm text-slate-600">جهة اتصال طوارئ</p>
+                        <p className="font-semibold text-slate-800">{member.emergencyContact}</p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-semibold text-slate-600">رقم الطوارئ</label>
-                      <p className="text-slate-800 mt-1">{member.emergencyPhone}</p>
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-5 h-5 text-slate-400" />
+                      <div>
+                        <p className="text-sm text-slate-600">رقم الطوارئ</p>
+                        <p className="font-semibold text-slate-800" dir="ltr">{member.emergencyPhone}</p>
+                      </div>
                     </div>
                   </>
                 )}
+              </div>
+            </div>
 
-                <div>
-                  <label className="text-sm font-semibold text-slate-600">تاريخ التسجيل</label>
-                  <p className="text-slate-800 mt-1">{format(new Date(member.joinDate), 'yyyy-MM-dd')}</p>
+            {/* Tabs */}
+            <div className="bg-white rounded-xl shadow-md border border-slate-200">
+              <div className="border-b border-slate-200">
+                <div className="flex gap-4 px-6">
+                  {[
+                    { id: 'overview', label: 'نظرة عامة', icon: Activity },
+                    { id: 'subscriptions', label: 'الاشتراكات', icon: Package },
+                    { id: 'attendance', label: 'الحضور', icon: Clock },
+                    { id: 'payments', label: 'المدفوعات', icon: DollarSign },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-blue-600 text-blue-600 font-semibold'
+                          : 'border-transparent text-slate-600 hover:text-slate-800'
+                      }`}
+                    >
+                      <tab.icon className="w-5 h-5" />
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
+              </div>
 
-                <div>
-                  <label className="text-sm font-semibold text-slate-600">الحالة</label>
-                  <p className="mt-1">
-                    {member.status === 'active' ? (
-                      <span className="text-green-600 font-semibold">✓ نشط</span>
-                    ) : (
-                      <span className="text-red-600 font-semibold">✗ غير نشط</span>
+              <div className="p-6">
+                {/* Overview Tab */}
+                {activeTab === 'overview' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-blue-600 mb-1">إجمالي الاشتراكات</p>
+                        <p className="text-2xl font-bold text-blue-800">{subscriptions.length}</p>
+                      </div>
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <p className="text-sm text-green-600 mb-1">عدد الحضور</p>
+                        <p className="text-2xl font-bold text-green-800">{attendance.length}</p>
+                      </div>
+                      <div className="p-4 bg-purple-50 rounded-lg">
+                        <p className="text-sm text-purple-600 mb-1">إجمالي المدفوعات</p>
+                        <p className="text-2xl font-bold text-purple-800">
+                          {payments.reduce((sum, p) => sum + p.amount, 0)} ر.س
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {currentSubscription && (
+                      <div className="mt-6">
+                        <h3 className="font-bold text-slate-800 mb-3">الاشتراك الحالي</h3>
+                        <SubscriptionCard subscription={currentSubscription} />
+                      </div>
                     )}
-                  </p>
-                </div>
+                  </div>
+                )}
 
-                {member.notes && (
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-slate-600">ملاحظات</label>
-                    <p className="text-slate-800 mt-1">{member.notes}</p>
+                {/* Subscriptions Tab */}
+                {activeTab === 'subscriptions' && (
+                  <div className="space-y-4">
+                    {subscriptions.length > 0 ? (
+                      subscriptions.map((subscription) => (
+                        <SubscriptionCard
+                          key={subscription.id}
+                          subscription={subscription}
+                        />
+                      ))
+                    ) : (
+                      <p className="text-center text-slate-500 py-8">لا توجد اشتراكات</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Attendance Tab */}
+                {activeTab === 'attendance' && (
+                  <div>
+                    <h3 className="font-bold text-slate-800 mb-4">سجل الحضور (آخر 30 يوم)</h3>
+                    {attendance.length > 0 ? (
+                      <div className="space-y-2">
+                        {attendance.map((record) => (
+                          <div
+                            key={record.id}
+                            className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                          >
+                            <div>
+                              <p className="font-semibold text-slate-800">{record.date}</p>
+                              <p className="text-sm text-slate-600">
+                                دخول: {format(new Date(record.checkIn), 'HH:mm')}
+                              </p>
+                            </div>
+                            {record.checkOut && (
+                              <p className="text-sm text-slate-600">
+                                خروج: {format(new Date(record.checkOut), 'HH:mm')}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-slate-500 py-8">لا يوجد سجل حضور</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Payments Tab */}
+                {activeTab === 'payments' && (
+                  <div>
+                    <h3 className="font-bold text-slate-800 mb-4">سجل المدفوعات</h3>
+                    {payments.length > 0 ? (
+                      <div className="space-y-2">
+                        {payments.map((payment) => (
+                          <div
+                            key={payment.id}
+                            className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                          >
+                            <div>
+                              <p className="font-semibold text-slate-800">{payment.description}</p>
+                              <p className="text-sm text-slate-600">
+                                {format(new Date(payment.paymentDate), 'yyyy-MM-dd')}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {payment.paymentMethod === 'cash' ? 'نقدي' : 
+                                 payment.paymentMethod === 'card' ? 'بطاقة' : 'تحويل'}
+                              </p>
+                            </div>
+                            <div className="text-left">
+                              <p className="text-lg font-bold text-green-600">
+                                {payment.amount} ر.س
+                              </p>
+                              {payment.receiptNumber && (
+                                <p className="text-xs text-slate-500">#{payment.receiptNumber}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-slate-500 py-8">لا توجد مدفوعات</p>
+                    )}
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Subscriptions History */}
-            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-purple-600" />
-                سجل الاشتراكات
-              </h2>
-
-              {member.subscriptions.length === 0 ? (
-                <p className="text-slate-600 text-center py-8">لا توجد اشتراكات</p>
-              ) : (
-                <div className="space-y-4">
-                  {member.subscriptions.map((sub) => (
-                    <div key={sub.id} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold text-slate-800">{sub.package.name}</p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            من {format(new Date(sub.startDate), 'yyyy-MM-dd')} 
-                            إلى {format(new Date(sub.endDate), 'yyyy-MM-dd')}
-                          </p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            المبلغ: {sub.amount} ريال
-                          </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          sub.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {sub.status === 'active' ? 'نشط' : 'منتهي'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Attendance History */}
-            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-              <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-green-600" />
-                سجل الحضور (آخر 10)
-              </h2>
-
-              {member.attendance.length === 0 ? (
-                <p className="text-slate-600 text-center py-8">لا يوجد سجل حضور</p>
-              ) : (
-                <div className="space-y-2">
-                  {member.attendance.map((att) => (
-                    <div key={att.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <div>
-                          <p className="font-semibold text-slate-800">{att.date}</p>
-                          <p className="text-sm text-slate-600">
-                            دخول: {format(new Date(att.checkIn), 'HH:mm')}
-                            {att.checkOut && ` - خروج: ${format(new Date(att.checkOut), 'HH:mm')}`}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Right Column - Quick Stats & Actions */}
+          {/* Right Column - QR Code & Quick Info */}
           <div className="space-y-6">
-            {/* Current Subscription */}
-            {activeSubscription && (
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-bold mb-4">الاشتراك الحالي</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-purple-100 text-sm">الباقة</p>
-                    <p className="font-semibold text-xl">{activeSubscription.package.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-purple-100 text-sm">تاريخ الانتهاء</p>
-                    <p className="font-semibold">{format(new Date(activeSubscription.endDate), 'yyyy-MM-dd')}</p>
-                  </div>
-                  <div>
-                    <p className="text-purple-100 text-sm">الأيام المتبقية</p>
-                    <p className="font-semibold text-2xl">
-                      {Math.ceil((new Date(activeSubscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} يوم
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <QRCodeDisplay
+              memberId={params.id}
+              memberName={member.fullName}
+              memberNumber={member.memberNumber}
+            />
 
-            {/* Quick Stats */}
+            {/* Membership Info */}
             <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-              <h3 className="font-bold text-slate-800 mb-4">إحصائيات سريعة</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-green-600" />
-                    <span className="text-sm font-semibold text-slate-700">مرات الحضور</span>
-                  </div>
-                  <span className="text-2xl font-bold text-green-600">{member.attendance.length}</span>
+              <h3 className="text-lg font-bold text-slate-800 mb-4">معلومات العضوية</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">رقم العضوية</span>
+                  <span className="font-semibold text-slate-800 font-mono">{member.memberNumber}</span>
                 </div>
-
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-semibold text-slate-700">المدفوعات</span>
-                  </div>
-                  <span className="text-2xl font-bold text-blue-600">{member.payments.length}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">تاريخ الانضمام</span>
+                  <span className="font-semibold text-slate-800">
+                    {format(new Date(member.joinDate), 'yyyy-MM-dd')}
+                  </span>
                 </div>
-
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-purple-600" />
-                    <span className="text-sm font-semibold text-slate-700">الاشتراكات</span>
-                  </div>
-                  <span className="text-2xl font-bold text-purple-600">{member.subscriptions.length}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Payments History */}
-            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-                آخر المدفوعات
-              </h3>
-
-              {member.payments.length === 0 ? (
-                <p className="text-slate-600 text-center py-4 text-sm">لا توجد مدفوعات</p>
-              ) : (
-                <div className="space-y-2">
-                  {member.payments.slice(0, 5).map((payment) => (
-                    <div key={payment.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                {currentSubscription && (
+                  <>
+                    <div className="pt-3 border-t border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-slate-600">الاشتراك الحالي</span>
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">نشط</span>
+                      </div>
+                      <p className="font-semibold text-slate-800">{currentSubscription.package?.name}</p>
+                    </div>
+                    {daysRemaining !== null && (
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-slate-800">{payment.amount} ريال</p>
-                          <p className="text-xs text-slate-600 mt-1">
-                            {format(new Date(payment.paymentDate), 'yyyy-MM-dd')}
-                          </p>
-                        </div>
-                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                          {payment.paymentMethod === 'cash' ? 'نقدي' : payment.paymentMethod === 'card' ? 'بطاقة' : 'تحويل'}
+                        <span className="text-sm text-slate-600">الأيام المتبقية</span>
+                        <span className={`font-bold ${
+                          daysRemaining <= 7 ? 'text-orange-600' : 'text-green-600'
+                        }`}>
+                          {daysRemaining} يوم
                         </span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    )}
+                  </>
+                )}
+              </div>
             </div>
+
+            {/* Notes */}
+            {member.notes && (
+              <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+                <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  ملاحظات
+                </h3>
+                <p className="text-slate-700 text-sm leading-relaxed">{member.notes}</p>
+              </div>
+            )}
           </div>
         </div>
       </main>
