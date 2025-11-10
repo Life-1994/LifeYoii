@@ -1,0 +1,10 @@
+sport-zone-gym-v2.0-electron.tar
+sport-zone-gym-v2.0-electron.zip
+sport-zone-project/node_modules/
+sport-zone-project/.next/
+sport-zone-project/build/
+sport-zone-project/dist/
+sport-zone-project/out/
+sport-zone-project/prisma/dev.db
+sport-zone-project/prisma/dev.db-journal
+sport-zone-project/.env

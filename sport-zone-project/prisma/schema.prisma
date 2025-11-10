@@ -40,6 +40,7 @@ model Member {
   subscriptions Subscription[]
   attendance    Attendance[]
   payments      Payment[]
+  bookings      Booking[]
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -115,4 +116,66 @@ model Setting {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// جدول المدربين
+model Trainer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  specialty String
+  image     String?
+  status    String   @default("active") // active, inactive
+  classes   Class[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// جدول الحصص
+model Class {
+  id          String    @id @default(cuid())
+  name        String
+  trainerId   String
+  trainer     Trainer   @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  capacity    Int
+  duration    Int       // بالدقائق
+  description String?
+  schedule    String?   // JSON array of schedule times
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// جدول الحجوزات
+model Booking {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  date      DateTime
+  status    String   @default("confirmed") // confirmed, cancelled, completed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// جدول الإيرادات
+model Revenue {
+  id          String   @id @default(cuid())
+  amount      Float
+  source      String   // subscription, personal_training, store, other
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+// جدول المصروفات
+model Expense {
+  id          String   @id @default(cuid())
+  amount      Float
+  category    String   // rent, salaries, equipment, utilities, maintenance, other
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
 }

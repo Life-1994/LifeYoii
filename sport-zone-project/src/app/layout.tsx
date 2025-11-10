@@ -1,15 +1,9 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Cairo } from 'next/font/google'
-
-const cairo = Cairo({ 
-  subsets: ['arabic', 'latin'],
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   title: 'Sport Zone - المنطقة الرياضية',
-  description: 'نظام إدارة النادي الرياضي',
+  description: 'نظام إدارة النادي الرياضي - لوحة التحكم الإحصائية المتقدمة',
 }
 
 export default function RootLayout({
@@ -19,7 +13,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={cairo.className}>{children}</body>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap" rel="stylesheet" />
+      </head>
+      <body style={{ fontFamily: 'Cairo, sans-serif' }}>{children}</body>
     </html>
   )
 }
