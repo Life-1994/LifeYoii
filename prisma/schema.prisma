@@ -40,6 +40,8 @@ model Member {
   subscriptions Subscription[]
   attendance    Attendance[]
   payments      Payment[]
+  invoices      Invoice[]
+  transactions  Transaction[]
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -94,19 +96,83 @@ model Attendance {
   createdAt   DateTime  @default(now())
 }
 
-// جدول المدفوعات
+// جدول المدفوعات المتقدم
 model Payment {
-  id            String    @id @default(cuid())
+  id              String    @id @default(cuid())
+  memberId        String
+  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  invoiceId       String?
+  invoice         Invoice?  @relation(fields: [invoiceId], references: [id])
+  amount          Float
+  currency        String    @default("SAR")
+  method          String    // CASH, CARD, BANK_TRANSFER, PAYPAL, STRIPE, APPLE_PAY, GOOGLE_PAY
+  status          String    // PENDING, COMPLETED, FAILED, REFUNDED, CANCELLED
+  transactionId   String?   @unique
+  gateway         String?
+  gatewayResponse String?   // JSON as string
+  description     String?
+  receiptUrl      String?
+  receiptNumber   String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// جدول الفواتير
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
   memberId      String
-  amount        Float
-  paymentDate   DateTime  @default(now())
-  paymentMethod String    // cash, card, transfer
-  description   String?
-  receiptNumber String?   @unique
-  
-  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime  @default(now())
+  member        Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  items         InvoiceItem[]
+  subtotal      Float
+  discount      Float         @default(0)
+  tax           Float         @default(0)
+  total         Float
+  status        String        @default("PENDING") // DRAFT, PENDING, PAID, OVERDUE, CANCELLED
+  dueDate       DateTime
+  paidDate      DateTime?
+  payments      Payment[]
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+// بنود الفاتورة
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+}
+
+// كوبونات الخصم
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        String   // PERCENTAGE, FIXED_AMOUNT
+  value       Float
+  minAmount   Float?
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  validFrom   DateTime
+  validUntil  DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+// سجل المعاملات المالية
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String   // INCOME, EXPENSE, REFUND
+  amount      Float
+  memberId    String?
+  member      Member?  @relation(fields: [memberId], references: [id])
+  description String
+  reference   String?
+  createdAt   DateTime @default(now())
 }
 
 // جدول الإعدادات
