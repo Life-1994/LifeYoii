@@ -16,7 +16,7 @@ async function main() {
       email: 'admin@sportzone.com',
       name: 'المدير العام',
       password: hashedPassword,
-      role: 'admin',
+      role: 'ADMIN',
     },
   })
 
