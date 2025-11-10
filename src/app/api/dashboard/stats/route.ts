@@ -51,9 +51,10 @@ export async function GET() {
       // Monthly revenue
       prisma.payment.aggregate({
         where: {
-          paymentDate: {
+          createdAt: {
             gte: startOfMonth,
           },
+          status: 'COMPLETED',
         },
         _sum: {
           amount: true,

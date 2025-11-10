@@ -369,11 +369,11 @@ export default function MemberDetailsPage({ params }: { params: { id: string } }
                         <div>
                           <p className="font-semibold text-slate-800">{payment.amount} ريال</p>
                           <p className="text-xs text-slate-600 mt-1">
-                            {format(new Date(payment.paymentDate), 'yyyy-MM-dd')}
+                            {format(new Date(payment.createdAt), 'yyyy-MM-dd')}
                           </p>
                         </div>
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                          {payment.paymentMethod === 'cash' ? 'نقدي' : payment.paymentMethod === 'card' ? 'بطاقة' : 'تحويل'}
+                          {payment.method === 'CASH' ? 'نقدي' : payment.method === 'CARD' ? 'بطاقة' : 'تحويل'}
                         </span>
                       </div>
                     </div>

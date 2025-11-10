@@ -21,7 +21,7 @@ export async function GET(
           take: 10,
         },
         payments: {
-          orderBy: { paymentDate: 'desc' },
+          orderBy: { createdAt: 'desc' },
           take: 10,
         },
       },

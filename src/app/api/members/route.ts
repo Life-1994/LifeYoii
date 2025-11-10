@@ -130,7 +130,9 @@ export async function POST(request: Request) {
           data: {
             memberId: member.id,
             amount: pkg.price,
-            paymentMethod: body.paymentMethod || 'cash',
+            currency: 'SAR',
+            method: body.paymentMethod?.toUpperCase() || 'CASH',
+            status: 'COMPLETED',
             description: `اشتراك ${pkg.name}`,
             receiptNumber: `R${Date.now()}`,
           },
