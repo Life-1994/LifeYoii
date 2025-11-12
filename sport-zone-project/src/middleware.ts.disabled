@@ -1,0 +1,25 @@
+/**
+ * Middleware للتحقق من المصادقة والصلاحيات
+ * 
+ * ملاحظة: تم تبسيط الـ middleware لاستخدام NextAuth middleware المدمج
+ * للتحقق من الصلاحيات بشكل متقدم، استخدم server-side checks في الصفحات
+ */
+
+export { auth as middleware } from "@/lib/auth"
+
+/**
+ * تكوين المسارات التي يعمل عليها الـ middleware
+ */
+export const config = {
+  matcher: [
+    /*
+     * مطابقة جميع المسارات ما عدا:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - المسارات العامة (login, register, etc.)
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|login|register|forgot-password|reset-password|403).*)",
+  ],
+}
