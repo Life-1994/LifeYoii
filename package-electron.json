@@ -1,0 +1,148 @@
+{
+  "name": "sport-zone-gym",
+  "productName": "Sport Zone",
+  "version": "2.0.0",
+  "description": "نظام إدارة النادي الرياضي - المنطقة الرياضية",
+  "author": {
+    "name": "Sport Zone",
+    "email": "info@sportzone.com"
+  },
+  "main": "electron/main.js",
+  "homepage": "./",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio",
+    "setup": "prisma generate && prisma db push && node prisma/seed.js",
+    
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "next build && next export && electron-builder",
+    "electron:build-win": "next build && next export && electron-builder --win",
+    "electron:build-mac": "next build && next export && electron-builder --mac",
+    "electron:build-linux": "next build && next export && electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "@radix-ui/react-avatar": "^1.0.4",
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-dropdown-menu": "^2.0.6",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@hookform/resolvers": "^3.3.2",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^2.30.0",
+    "lucide-react": "^0.294.0",
+    "next": "14.0.4",
+    "next-auth": "^4.24.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.49.0",
+    "zod": "^3.22.4",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "concurrently": "^8.2.2",
+    "electron": "^27.1.3",
+    "electron-builder": "^24.9.1",
+    "electron-is-dev": "^2.0.0",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "postcss": "^8",
+    "prisma": "^5.7.0",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5",
+    "wait-on": "^7.2.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "build": {
+    "appId": "com.sportzone.gym",
+    "productName": "Sport Zone",
+    "copyright": "Copyright © 2024 Sport Zone",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "out/**/*",
+      "prisma/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "prisma",
+        "to": "prisma"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Sport-Zone-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sport Zone",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "license": "LICENSE.txt",
+      "language": "1025"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.business",
+      "artifactName": "Sport-Zone-${version}.${ext}"
+    },
+    "dmg": {
+      "title": "Sport Zone",
+      "icon": "build/icon.icns",
+      "backgroundColor": "#f8fafc",
+      "window": {
+        "width": 600,
+        "height": 400
+      }
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icons",
+      "category": "Office",
+      "artifactName": "Sport-Zone-${version}.${ext}"
+    }
+  }
+}

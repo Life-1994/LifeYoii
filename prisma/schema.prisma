@@ -1,0 +1,156 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// جدول المستخدمين (الموظفين)
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("admin") // admin, trainer, receptionist
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// جدول المشتركين
+model Member {
+  id               String         @id @default(cuid())
+  memberNumber     String         @unique // رقم العضوية
+  fullName         String
+  phone            String
+  email            String?
+  nationalId       String?
+  dateOfBirth      DateTime?
+  gender           String         // male, female
+  address          String?
+  emergencyContact String?
+  emergencyPhone   String?
+  photo            String?        // مسار الصورة
+  healthConditions String?        // أمراض مزمنة، حساسية
+  qrCode           String?        @unique // QR Code فريد
+  joinDate         DateTime       @default(now())
+  status           String         @default("active") // active, inactive, suspended
+  notes            String?
+  
+  subscriptions Subscription[]
+  attendance    Attendance[]
+  payments      Payment[]
+  measurements  BodyMeasurement[]
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?      // Soft delete
+}
+
+// جدول الباقات
+model Package {
+  id            String         @id @default(cuid())
+  name          String         // اسم الباقة
+  nameEn        String?        // Package name in English
+  duration      Int            // المدة بالأيام
+  price         Float          // السعر
+  description   String?
+  features      String?        // المميزات (JSON)
+  isActive      Boolean        @default(true)
+  
+  subscriptions Subscription[]
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// جدول الاشتراكات
+model Subscription {
+  id          String    @id @default(cuid())
+  memberId    String
+  packageId   String
+  startDate   DateTime
+  endDate     DateTime
+  status      String    @default("active") // active, expired, cancelled, frozen
+  amount      Float
+  discount    Float     @default(0) // قيمة الخصم
+  paymentStatus String  @default("paid") // paid, pending, overdue
+  paymentMethod String? // cash, card, transfer
+  freezeReason String?  // سبب التجميد
+  freezeStartDate DateTime? // تاريخ بداية التجميد
+  freezeEndDate   DateTime? // تاريخ نهاية التجميد
+  cancelReason String?  // سبب الإلغاء
+  notes       String?
+  
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  package     Package   @relation(fields: [packageId], references: [id])
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// جدول الحضور
+model Attendance {
+  id          String    @id @default(cuid())
+  memberId    String
+  checkIn     DateTime  @default(now())
+  checkOut    DateTime?
+  date        String    // تاريخ الحضور (YYYY-MM-DD)
+  notes       String?
+  
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+}
+
+// جدول المدفوعات
+model Payment {
+  id            String    @id @default(cuid())
+  memberId      String
+  amount        Float
+  paymentDate   DateTime  @default(now())
+  paymentMethod String    // cash, card, transfer
+  description   String?
+  receiptNumber String?   @unique
+  
+  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+}
+
+// جدول الإعدادات
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// جدول القياسات الجسمية
+model BodyMeasurement {
+  id          String    @id @default(cuid())
+  memberId    String
+  weight      Float?    // الوزن بالكجم
+  height      Float?    // الطول بالسم
+  bmi         Float?    // Body Mass Index
+  bodyFat     Float?    // نسبة الدهون
+  muscle      Float?    // نسبة العضلات
+  notes       String?
+  
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+}
+
+// جدول الإشعارات
+model Notification {
+  id          String    @id @default(cuid())
+  type        String    // subscription_expiring, payment_overdue, welcome, renewal
+  title       String
+  message     String
+  recipientId String?   // member id or null for admin notifications
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+}
